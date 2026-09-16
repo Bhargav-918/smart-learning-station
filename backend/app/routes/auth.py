@@ -129,7 +129,28 @@ def login(
         "access_token": token,
         "token_type": "bearer"
     }
+@router.get("/debug-user")
+def debug_user(
+    db: Session = Depends(get_db)
+):
+    user = (
+        db.query(User)
+        .filter(User.email == "kb4765558@gmail.com")
+        .first()
+    )
 
+    if not user:
+        return {
+            "found": False
+        }
+
+    return {
+        "found": True,
+        "id": user.id,
+        "email": user.email,
+        "role": user.role,
+        "active": user.is_active
+    }
 
 @router.get("/me")
 def get_current_user(
