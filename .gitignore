@@ -1,0 +1,18 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+
+# Node
+node_modules/
+dist/
+
+# IntelliJ
+.idea/
+*.iml
+
+# Uploaded face images
+backend/uploads/
