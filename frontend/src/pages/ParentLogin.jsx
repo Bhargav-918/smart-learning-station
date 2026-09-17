@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = "https://smart-learning-station.onrender.com";
 
-function ParentLogin({ onLogin, onBackToStudentLogin }) {
+function ParentLogin({ onLogin, onRegister, onBackToStudentLogin }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
@@ -129,7 +129,13 @@ function ParentLogin({ onLogin, onBackToStudentLogin }) {
                 <div className="divider">
                     <span>OR</span>
                 </div>
-
+                <button
+                    className="register-parent-button"
+                    onClick={onRegister}
+                    disabled={loading}
+                >
+                    New parent? Create an account
+                </button>
                 <button
                     className="student-login-button"
                     onClick={onBackToStudentLogin}

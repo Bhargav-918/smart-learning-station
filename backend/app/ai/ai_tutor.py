@@ -13,22 +13,36 @@ def get_gemini_client():
 
 def detect_topic(question: str):
     """
-    Detect subject/topic locally first.
+    Local topic classifier.
 
-    Gemini is used only when the local classifier
-    cannot identify the topic.
-
-    This function does NOT determine mastery.
+    This function intentionally does NOT call Gemini.
+    This prevents topic detection from consuming Gemini quota.
     """
 
     q = question.lower().strip()
 
-    # -----------------------------
-    # Computer Science
-    # -----------------------------
+    topic_keywords = {
+        "Cybersecurity": [
+            "cybersecurity",
+            "cyber security",
+            "cia triad",
+            "confidentiality",
+            "integrity",
+            "availability",
+            "malware",
+            "virus",
+            "worm",
+            "phishing",
+            "firewall",
+            "encryption",
+            "hacking",
+            "penetration testing",
+            "pentesting",
+            "vulnerability",
+            "network security"
+        ],
 
-    cs_topics = {
-        "dsa": [
+        "Data Structures and Algorithms": [
             "data structure",
             "data structures",
             "algorithm",
@@ -38,36 +52,35 @@ def detect_topic(question: str):
             "stack",
             "queue",
             "tree",
+            "binary tree",
             "graph",
-            "binary search",
-            "sorting",
-            "recursion",
             "dfs",
             "bfs",
+            "sorting",
+            "searching",
+            "recursion",
             "dynamic programming"
         ],
 
-        "python": [
+        "Python Programming": [
             "python",
             "list comprehension",
-            "tuple",
             "dictionary",
-            "set",
+            "tuple",
             "lambda",
             "decorator"
         ],
 
-        "java": [
+        "Java Programming": [
             "java",
-            "class",
-            "object",
             "inheritance",
             "polymorphism",
             "interface",
-            "constructor"
+            "constructor",
+            "encapsulation"
         ],
 
-        "database": [
+        "Database Systems": [
             "sql",
             "database",
             "postgresql",
@@ -78,25 +91,7 @@ def detect_topic(question: str):
             "foreign key"
         ],
 
-        "cybersecurity": [
-            "cybersecurity",
-            "cyber security",
-            "hacking",
-            "penetration testing",
-            "pentesting",
-            "malware",
-            "virus",
-            "worm",
-            "firewall",
-            "phishing",
-            "encryption",
-            "cia triad",
-            "vulnerability",
-            "network security"
-        ],
-
-        "computer networks": [
-            "network",
+        "Computer Networks": [
             "tcp",
             "udp",
             "ip address",
@@ -106,45 +101,18 @@ def detect_topic(question: str):
             "router",
             "switch",
             "osi model",
-            "subnet"
-        ]
-    }
-
-    for topic, keywords in cs_topics.items():
-
-        for keyword in keywords:
-
-            if keyword in q:
-
-                subject = "Computer Science"
-
-                if topic == "cybersecurity":
-                    subject = "Cybersecurity"
-
-                elif topic == "computer networks":
-                    subject = "Computer Networks"
-
-                elif topic == "database":
-                    subject = "Database Systems"
-
-                return {
-                    "subject": subject,
-                    "topic": topic.title()
-                }
-
-    # -----------------------------
-    # Mathematics
-    # -----------------------------
-
-    math_topics = {
-        "probability": [
-            "probability",
-            "random variable",
-            "conditional probability",
-            "bayes"
+            "subnet",
+            "computer network"
         ],
 
-        "statistics": [
+        "Probability": [
+            "probability",
+            "conditional probability",
+            "random variable",
+            "bayes theorem"
+        ],
+
+        "Statistics": [
             "statistics",
             "mean",
             "median",
@@ -153,238 +121,111 @@ def detect_topic(question: str):
             "standard deviation"
         ],
 
-        "algebra": [
+        "Algebra": [
             "algebra",
             "equation",
             "quadratic",
             "polynomial"
         ],
 
-        "calculus": [
+        "Calculus": [
             "calculus",
             "derivative",
             "differentiation",
             "integral",
             "integration",
             "limit"
-        ]
-    }
+        ],
 
-    for topic, keywords in math_topics.items():
-
-        for keyword in keywords:
-
-            if keyword in q:
-
-                return {
-                    "subject": "Mathematics",
-                    "topic": topic.title()
-                }
-
-    # -----------------------------
-    # Physics
-    # -----------------------------
-
-    physics_topics = {
-        "mechanics": [
+        "Physics": [
+            "physics",
             "force",
             "motion",
             "velocity",
             "acceleration",
-            "newton law",
-            "momentum"
+            "momentum",
+            "newton"
         ],
 
-        "electricity": [
-            "voltage",
-            "current",
-            "resistance",
-            "ohm",
-            "circuit",
-            "electricity"
-        ],
-
-        "optics": [
-            "light",
-            "reflection",
-            "refraction",
-            "lens",
-            "mirror"
-        ]
-    }
-
-    for topic, keywords in physics_topics.items():
-
-        for keyword in keywords:
-
-            if keyword in q:
-
-                return {
-                    "subject": "Physics",
-                    "topic": topic.title()
-                }
-
-    # -----------------------------
-    # Chemistry
-    # -----------------------------
-
-    chemistry_topics = {
-        "organic chemistry": [
-            "organic chemistry",
-            "hydrocarbon",
-            "alkane",
-            "alkene",
-            "alkyne"
-        ],
-
-        "chemical bonding": [
-            "chemical bond",
-            "ionic bond",
-            "covalent bond",
-            "bonding"
-        ],
-
-        "atomic structure": [
+        "Chemistry": [
+            "chemistry",
             "atom",
             "electron",
             "proton",
             "neutron",
-            "atomic structure"
-        ]
-    }
-
-    for topic, keywords in chemistry_topics.items():
-
-        for keyword in keywords:
-
-            if keyword in q:
-
-                return {
-                    "subject": "Chemistry",
-                    "topic": topic.title()
-                }
-
-    # -----------------------------
-    # Biology
-    # -----------------------------
-
-    biology_topics = {
-        "human anatomy": [
-            "human body",
-            "organ",
-            "heart",
-            "brain",
-            "lung",
-            "kidney",
-            "anatomy"
+            "molecule",
+            "chemical bond",
+            "ionic bond",
+            "covalent bond"
         ],
 
-        "cell biology": [
+        "Biology": [
+            "biology",
             "cell",
-            "mitochondria",
-            "nucleus",
-            "cell membrane"
-        ],
-
-        "genetics": [
-            "genetics",
             "dna",
             "rna",
             "gene",
-            "chromosome"
+            "chromosome",
+            "heart",
+            "brain",
+            "kidney",
+            "human anatomy"
         ]
     }
 
-    for topic, keywords in biology_topics.items():
+    for topic, keywords in topic_keywords.items():
 
         for keyword in keywords:
 
             if keyword in q:
 
+                if topic == "Cybersecurity":
+                    subject = "Cybersecurity"
+
+                elif topic in [
+                    "Probability",
+                    "Statistics",
+                    "Algebra",
+                    "Calculus"
+                ]:
+                    subject = "Mathematics"
+
+                elif topic == "Physics":
+                    subject = "Physics"
+
+                elif topic == "Chemistry":
+                    subject = "Chemistry"
+
+                elif topic == "Biology":
+                    subject = "Biology"
+
+                elif topic == "Database Systems":
+                    subject = "Database Systems"
+
+                elif topic == "Computer Networks":
+                    subject = "Computer Networks"
+
+                else:
+                    subject = "Computer Science"
+
+                print(
+                    f"LOCAL TOPIC DETECTION: "
+                    f"{subject} → {topic}"
+                )
+
                 return {
-                    "subject": "Biology",
-                    "topic": topic.title()
+                    "subject": subject,
+                    "topic": topic
                 }
 
-    # -----------------------------
-    # Gemini fallback
-    # -----------------------------
-
-    client = get_gemini_client()
-
-    if client is None:
-
-        return {
-            "subject": "General",
-            "topic": "General"
-        }
-
-    prompt = f"""
-You are the topic classifier for SmartLearn.
-
-Analyze the student's question and identify the most likely
-academic subject and topic.
-
-Student question:
-{question}
-
-Return ONLY:
-
-SUBJECT: <subject>
-TOPIC: <topic>
-
-Do not answer the question.
-"""
-
-    try:
-
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=prompt
-        )
-
-        text = response.text.strip()
-
-    except ClientError as e:
-
-        if getattr(e, "code", None) == 429:
-
-            print(
-                "Gemini quota exceeded during topic detection. "
-                "Using General topic."
-            )
-
-            return {
-                "subject": "General",
-                "topic": "General"
-            }
-
-        raise
-
-    subject = "General"
-    topic = "General"
-
-    for line in text.splitlines():
-
-        line = line.strip()
-
-        if line.upper().startswith("SUBJECT:"):
-
-            subject = line.split(
-                ":",
-                1
-            )[1].strip()
-
-        elif line.upper().startswith("TOPIC:"):
-
-            topic = line.split(
-                ":",
-                1
-            )[1].strip()
+    print(
+        "LOCAL TOPIC DETECTION: "
+        "No matching topic → General"
+    )
 
     return {
-        "subject": subject,
-        "topic": topic
+        "subject": "General",
+        "topic": "General"
     }
 
 

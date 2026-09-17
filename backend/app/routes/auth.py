@@ -1,33 +1,41 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    File,
+    UploadFile,
+    Form
+)
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import date
+from pathlib import Path
+import shutil
+
+import cv2
+import numpy as np
+
 from app.db.database import get_db
+
 from app.schemas.user import (
     UserRegister,
-    ParentRegister,
     ParentStudentLink
 )
-from app.db.models import User,FaceEmbedding,ParentStudent
-from app.schemas.user import UserRegister
-from fastapi import File, UploadFile
-from fastapi import Form
-from pathlib import Path
-import shutil
-from app.schemas.user import ParentRegister
-from fastapi import File, UploadFile, Form
-from pathlib import Path
-import shutil
-import json
+
+from app.db.models import (
+    User,
+    FaceEmbedding,
+    ParentStudent
+)
+
 from app.core.security import (
     hash_password,
     verify_password,
     create_access_token,
     get_current_user_id
 )
-import cv2
-import numpy as np
+
 from app.services.face_service import (
     create_embedding,
     embedding_to_bytes,
@@ -35,11 +43,16 @@ from app.services.face_service import (
     compare_embeddings
 )
 
+
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"]
 )
 
+
+# =========================================================
+# STUDENT REGISTRATION
+# =========================================================
 
 @router.post("/register")
 def register(
@@ -94,6 +107,10 @@ def register(
     }
 
 
+# =========================================================
+# STUDENT LOGIN
+# =========================================================
+
 @router.post("/login")
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -101,7 +118,10 @@ def login(
 ):
     db_user = (
         db.query(User)
-        .filter(User.email == form_data.username,User.role == "student")
+        .filter(
+            User.email == form_data.username,
+            User.role == "student"
+        )
         .first()
     )
 
@@ -119,16 +139,29 @@ def login(
             status_code=401,
             detail="Invalid email or password"
         )
-    if not db_user.is_active: raise HTTPException( status_code=403, detail="Student account is inactive" )
+
+    if not db_user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Student account is inactive"
+        )
 
     token = create_access_token(
-        {"sub": str(db_user.id)}
+        {
+            "sub": str(db_user.id)
+        }
     )
 
     return {
         "access_token": token,
         "token_type": "bearer"
     }
+
+
+# =========================================================
+# DEBUG USER
+# =========================================================
+
 @router.get("/debug-user")
 def debug_user(
     db: Session = Depends(get_db)
@@ -151,6 +184,11 @@ def debug_user(
         "role": user.role,
         "active": user.is_active
     }
+
+
+# =========================================================
+# CURRENT USER
+# =========================================================
 
 @router.get("/me")
 def get_current_user(
@@ -175,7 +213,14 @@ def get_current_user(
         "email": user.email,
         "role": user.role
     }
+
+
+# =========================================================
+# PROFILE UPDATE MODEL
+# =========================================================
+
 class ProfileUpdate(BaseModel):
+
     # Personal Information
     full_name: str | None = None
     date_of_birth: date | None = None
@@ -196,6 +241,10 @@ class ProfileUpdate(BaseModel):
     learning_goal: str | None = None
     daily_learning_time: str | None = None
 
+
+# =========================================================
+# GET PROFILE
+# =========================================================
 
 @router.get("/profile")
 def get_profile(
@@ -242,6 +291,10 @@ def get_profile(
     }
 
 
+# =========================================================
+# UPDATE PROFILE
+# =========================================================
+
 @router.put("/profile")
 def update_profile(
     profile: ProfileUpdate,
@@ -273,6 +326,12 @@ def update_profile(
     return {
         "message": "Profile updated successfully"
     }
+
+
+# =========================================================
+# FACE ENROLLMENT
+# =========================================================
+
 @router.post("/face-enroll")
 def enroll_face(
     file: UploadFile = File(...),
@@ -306,6 +365,7 @@ def enroll_face(
 
     # Create face storage directory
     face_dir = Path("uploads/faces")
+
     face_dir.mkdir(
         parents=True,
         exist_ok=True
@@ -331,15 +391,23 @@ def enroll_face(
         "user_id": user.id,
         "face_enrolled": True
     }
+
+
+# =========================================================
+# STUDENT REGISTRATION WITH FACE
+# =========================================================
+
 @router.post("/register-with-face")
 async def register_with_face(
     data: str = Form(...),
     face: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
+
     # Parse registration JSON
     try:
         user_data = UserRegister.model_validate_json(data)
+
     except Exception:
         raise HTTPException(
             status_code=400,
@@ -410,11 +478,17 @@ async def register_with_face(
     if embedding is None:
         raise HTTPException(
             status_code=400,
-            detail="No clear face detected. Please look directly at the camera and capture again."
+            detail=(
+                "No clear face detected. "
+                "Please look directly at the camera "
+                "and capture again."
+            )
         )
 
     # Convert embedding to PostgreSQL BYTEA
-    embedding_bytes = embedding_to_bytes(embedding)
+    embedding_bytes = embedding_to_bytes(
+        embedding
+    )
 
     # -----------------------------------------
     # Create student
@@ -425,6 +499,7 @@ async def register_with_face(
         date_of_birth=user_data.date_of_birth,
         phone_number=user_data.phone_number,
         email=user_data.email,
+
         password_hash=hash_password(
             user_data.password
         ),
@@ -466,6 +541,7 @@ async def register_with_face(
     # -----------------------------------------
 
     face_dir = Path("uploads/faces")
+
     face_dir.mkdir(
         parents=True,
         exist_ok=True
@@ -474,10 +550,12 @@ async def register_with_face(
     face_path = face_dir / f"{new_user.id}.jpg"
 
     try:
+
         with open(face_path, "wb") as buffer:
             buffer.write(image_bytes)
 
     except Exception:
+
         db.rollback()
 
         db.delete(new_user)
@@ -491,15 +569,24 @@ async def register_with_face(
     db.commit()
 
     return {
-        "message": "Registration and face enrollment successful",
+        "message": (
+            "Registration and face enrollment successful"
+        ),
         "user_id": new_user.id,
         "face_enrolled": True
     }
+
+
+# =========================================================
+# FACE LOGIN
+# =========================================================
+
 @router.post("/face-login")
 async def face_login(
     face: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
+
     # -----------------------------------------
     # 1. Validate image
     # -----------------------------------------
@@ -543,18 +630,27 @@ async def face_login(
     # -----------------------------------------
 
     try:
-        live_embedding = create_embedding(image)
+
+        live_embedding = create_embedding(
+            image
+        )
 
     except Exception as e:
+
         raise HTTPException(
             status_code=500,
             detail=f"Face processing failed: {str(e)}"
         )
 
     if live_embedding is None:
+
         raise HTTPException(
             status_code=400,
-            detail="No clear face detected. Please look directly at the camera and try again."
+            detail=(
+                "No clear face detected. "
+                "Please look directly at the camera "
+                "and try again."
+            )
         )
 
     # -----------------------------------------
@@ -567,6 +663,7 @@ async def face_login(
     )
 
     if not enrolled_faces:
+
         raise HTTPException(
             status_code=404,
             detail="No face-enrolled students found."
@@ -582,6 +679,7 @@ async def face_login(
     for record in enrolled_faces:
 
         try:
+
             enrolled_embedding = bytes_to_embedding(
                 record.embedding
             )
@@ -590,14 +688,24 @@ async def face_login(
                 enrolled_embedding,
                 live_embedding
             )
-            print("FACE SIMILARITY:", similarity)
+
+            print(
+                "FACE SIMILARITY:",
+                similarity
+            )
 
             if similarity > best_similarity:
+
                 best_similarity = similarity
                 best_match = record
 
         except Exception as e:
-            print("FACE COMPARISON ERROR:", e)
+
+            print(
+                "FACE COMPARISON ERROR:",
+                e
+            )
+
             continue
 
     # -----------------------------------------
@@ -605,15 +713,28 @@ async def face_login(
     # -----------------------------------------
 
     FACE_THRESHOLD = 0.363
-    print("BEST FACE SIMILARITY:", best_similarity)
-    print("FACE THRESHOLD:", FACE_THRESHOLD)
+
+    print(
+        "BEST FACE SIMILARITY:",
+        best_similarity
+    )
+
+    print(
+        "FACE THRESHOLD:",
+        FACE_THRESHOLD
+    )
+
     if (
         best_match is None
         or best_similarity < FACE_THRESHOLD
     ):
+
         raise HTTPException(
             status_code=401,
-            detail="Face not recognized. Please use email and password."
+            detail=(
+                "Face not recognized. "
+                "Please use email and password."
+            )
         )
 
     # -----------------------------------------
@@ -622,17 +743,21 @@ async def face_login(
 
     student = (
         db.query(User)
-        .filter(User.id == best_match.student_id)
+        .filter(
+            User.id == best_match.student_id
+        )
         .first()
     )
 
     if not student:
+
         raise HTTPException(
             status_code=404,
             detail="Student account not found."
         )
 
     if not student.is_active:
+
         raise HTTPException(
             status_code=403,
             detail="Student account is inactive."
@@ -654,39 +779,87 @@ async def face_login(
         "token_type": "bearer",
         "user_id": student.id,
         "full_name": student.full_name,
-        "similarity": round(best_similarity, 4)
+        "similarity": round(
+            best_similarity,
+            4
+        )
     }
+
+
+# =========================================================
+# PARENT REGISTRATION
+# =========================================================
+#
+# IMPORTANT:
+# This endpoint accepts multipart/form-data because
+# ParentRegister.jsx sends FormData.
+#
+# There must be ONLY ONE /parent/register endpoint.
+# =========================================================
+
 @router.post("/parent/register")
-def register_parent(
-    data: ParentRegister,
+def parent_register(
+    full_name: str = Form(...),
+    email: str = Form(...),
+    phone_number: str = Form(None),
+    password: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    # Check whether email already exists
+
+    # -----------------------------------------
+    # 1. Check whether email already exists
+    # -----------------------------------------
+
     existing_user = (
         db.query(User)
-        .filter(User.email == data.email)
+        .filter(User.email == email)
         .first()
     )
 
     if existing_user:
+
         raise HTTPException(
             status_code=400,
-            detail="Email already registered"
+            detail=(
+                "An account with this email already exists"
+            )
         )
 
-    # Create parent account
+    # -----------------------------------------
+    # 2. Validate password
+    # -----------------------------------------
+
+    if len(password) < 6:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 6 characters"
+        )
+
+    # -----------------------------------------
+    # 3. Create parent
+    # -----------------------------------------
+
     parent = User(
-        full_name=data.full_name,
-        phone_number=data.phone_number,
-        email=data.email,
-        password_hash=hash_password(data.password),
+        full_name=full_name,
+        email=email,
+        phone_number=phone_number,
+        password_hash=hash_password(password),
         role="parent",
         is_active=True
     )
 
+    # -----------------------------------------
+    # 4. Save parent
+    # -----------------------------------------
+
     db.add(parent)
     db.commit()
     db.refresh(parent)
+
+    # -----------------------------------------
+    # 5. Return response
+    # -----------------------------------------
 
     return {
         "message": "Parent registration successful",
@@ -697,12 +870,19 @@ def register_parent(
             "role": parent.role
         }
     }
+
+
+# =========================================================
+# PARENT LOGIN
+# =========================================================
+
 @router.post("/parent/login")
 def parent_login(
     email: str = Form(...),
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
+
     parent = (
         db.query(User)
         .filter(
@@ -713,6 +893,7 @@ def parent_login(
     )
 
     if not parent:
+
         raise HTTPException(
             status_code=401,
             detail="Invalid parent email or password"
@@ -722,12 +903,14 @@ def parent_login(
         password,
         parent.password_hash
     ):
+
         raise HTTPException(
             status_code=401,
             detail="Invalid parent email or password"
         )
 
     if not parent.is_active:
+
         raise HTTPException(
             status_code=403,
             detail="Parent account is inactive"
@@ -750,13 +933,23 @@ def parent_login(
             "role": parent.role
         }
     }
+
+
+# =========================================================
+# LINK STUDENT TO PARENT
+# =========================================================
+
 @router.post("/parent/link-student")
 def link_student_to_parent(
     data: ParentStudentLink,
     db: Session = Depends(get_db),
     parent_id: int = Depends(get_current_user_id)
 ):
-    # Verify logged-in user is actually a parent
+
+    # -----------------------------------------
+    # 1. Verify logged-in user is a parent
+    # -----------------------------------------
+
     parent = (
         db.query(User)
         .filter(
@@ -767,12 +960,16 @@ def link_student_to_parent(
     )
 
     if not parent:
+
         raise HTTPException(
             status_code=403,
             detail="Only parents can link students"
         )
 
-    # Find student
+    # -----------------------------------------
+    # 2. Find student
+    # -----------------------------------------
+
     student = (
         db.query(User)
         .filter(
@@ -783,12 +980,16 @@ def link_student_to_parent(
     )
 
     if not student:
+
         raise HTTPException(
             status_code=404,
             detail="Student not found"
         )
 
-    # Check whether already linked
+    # -----------------------------------------
+    # 3. Check whether already linked
+    # -----------------------------------------
+
     existing_link = (
         db.query(ParentStudent)
         .filter(
@@ -799,12 +1000,16 @@ def link_student_to_parent(
     )
 
     if existing_link:
+
         raise HTTPException(
             status_code=400,
             detail="Student is already linked to this parent"
         )
 
-    # Create relationship
+    # -----------------------------------------
+    # 4. Create relationship
+    # -----------------------------------------
+
     link = ParentStudent(
         parent_id=parent_id,
         student_id=student.id,

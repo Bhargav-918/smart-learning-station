@@ -8,7 +8,7 @@ import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import KnowledgeProfile from "./pages/KnowledgeProfile";
 import ParentDashboard from "./pages/ParentDashboard";
-
+import ParentRegister from "./pages/ParentRegister";
 function App() {
 
     // --------------------------------
@@ -47,7 +47,7 @@ function App() {
 
     const [knowledgeProfile, setKnowledgeProfile] =
         useState(false);
-
+    const [parentRegister, setParentRegister] = useState(false);
 
     // --------------------------------
     // Student Logout
@@ -106,14 +106,32 @@ function App() {
     if (!loggedIn && !parentLoggedIn) {
 
         if (showParentLogin) {
+
+            if (parentRegister) {
+                return (
+                    <ParentRegister
+                        onRegister={() => {
+                            setParentRegister(false);
+                        }}
+                        onBackToLogin={() => {
+                            setParentRegister(false);
+                        }}
+                    />
+                );
+            }
+
             return (
                 <ParentLogin
                     onLogin={() => {
                         localStorage.removeItem("token");
                         setParentLoggedIn(true);
                     }}
+                    onRegister={() => {
+                        setParentRegister(true);
+                    }}
                     onBackToStudentLogin={() => {
                         setShowParentLogin(false);
+                        setParentRegister(false);
                     }}
                 />
             );

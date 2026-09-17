@@ -63,3 +63,20 @@ button { border:0; }
 .parent-login-link:hover {
     text-decoration: underline;
 }
+
+.register-parent-button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 11px;
+    background: #eaf1ff;
+    color: #2855c5;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 12px;
+}
+
+.register-parent-button:hover {
+    background: #dce8ff;
+}
