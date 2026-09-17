@@ -1,25 +1,326 @@
 from google import genai
+from google.genai.errors import ClientError
+
 from app.core.config import GEMINI_API_KEY
+
+
+def get_gemini_client():
+    if not GEMINI_API_KEY:
+        return None
+
+    return genai.Client(api_key=GEMINI_API_KEY)
 
 
 def detect_topic(question: str):
     """
-    Detect the most relevant learning subject/topic from
-    the student's free-form question.
+    Detect subject/topic locally first.
 
-    This is only topic classification.
-    It does NOT determine student mastery.
+    Gemini is used only when the local classifier
+    cannot identify the topic.
+
+    This function does NOT determine mastery.
     """
 
-    if not GEMINI_API_KEY:
-        raise RuntimeError(
-            "GEMINI_API_KEY is not configured in the .env file."
-        )
+    q = question.lower().strip()
 
-    client = genai.Client(api_key=GEMINI_API_KEY)
+    # -----------------------------
+    # Computer Science
+    # -----------------------------
+
+    cs_topics = {
+        "dsa": [
+            "data structure",
+            "data structures",
+            "algorithm",
+            "algorithms",
+            "array",
+            "linked list",
+            "stack",
+            "queue",
+            "tree",
+            "graph",
+            "binary search",
+            "sorting",
+            "recursion",
+            "dfs",
+            "bfs",
+            "dynamic programming"
+        ],
+
+        "python": [
+            "python",
+            "list comprehension",
+            "tuple",
+            "dictionary",
+            "set",
+            "lambda",
+            "decorator"
+        ],
+
+        "java": [
+            "java",
+            "class",
+            "object",
+            "inheritance",
+            "polymorphism",
+            "interface",
+            "constructor"
+        ],
+
+        "database": [
+            "sql",
+            "database",
+            "postgresql",
+            "mysql",
+            "query",
+            "normalization",
+            "primary key",
+            "foreign key"
+        ],
+
+        "cybersecurity": [
+            "cybersecurity",
+            "cyber security",
+            "hacking",
+            "penetration testing",
+            "pentesting",
+            "malware",
+            "virus",
+            "worm",
+            "firewall",
+            "phishing",
+            "encryption",
+            "cia triad",
+            "vulnerability",
+            "network security"
+        ],
+
+        "computer networks": [
+            "network",
+            "tcp",
+            "udp",
+            "ip address",
+            "dns",
+            "http",
+            "https",
+            "router",
+            "switch",
+            "osi model",
+            "subnet"
+        ]
+    }
+
+    for topic, keywords in cs_topics.items():
+
+        for keyword in keywords:
+
+            if keyword in q:
+
+                subject = "Computer Science"
+
+                if topic == "cybersecurity":
+                    subject = "Cybersecurity"
+
+                elif topic == "computer networks":
+                    subject = "Computer Networks"
+
+                elif topic == "database":
+                    subject = "Database Systems"
+
+                return {
+                    "subject": subject,
+                    "topic": topic.title()
+                }
+
+    # -----------------------------
+    # Mathematics
+    # -----------------------------
+
+    math_topics = {
+        "probability": [
+            "probability",
+            "random variable",
+            "conditional probability",
+            "bayes"
+        ],
+
+        "statistics": [
+            "statistics",
+            "mean",
+            "median",
+            "mode",
+            "variance",
+            "standard deviation"
+        ],
+
+        "algebra": [
+            "algebra",
+            "equation",
+            "quadratic",
+            "polynomial"
+        ],
+
+        "calculus": [
+            "calculus",
+            "derivative",
+            "differentiation",
+            "integral",
+            "integration",
+            "limit"
+        ]
+    }
+
+    for topic, keywords in math_topics.items():
+
+        for keyword in keywords:
+
+            if keyword in q:
+
+                return {
+                    "subject": "Mathematics",
+                    "topic": topic.title()
+                }
+
+    # -----------------------------
+    # Physics
+    # -----------------------------
+
+    physics_topics = {
+        "mechanics": [
+            "force",
+            "motion",
+            "velocity",
+            "acceleration",
+            "newton law",
+            "momentum"
+        ],
+
+        "electricity": [
+            "voltage",
+            "current",
+            "resistance",
+            "ohm",
+            "circuit",
+            "electricity"
+        ],
+
+        "optics": [
+            "light",
+            "reflection",
+            "refraction",
+            "lens",
+            "mirror"
+        ]
+    }
+
+    for topic, keywords in physics_topics.items():
+
+        for keyword in keywords:
+
+            if keyword in q:
+
+                return {
+                    "subject": "Physics",
+                    "topic": topic.title()
+                }
+
+    # -----------------------------
+    # Chemistry
+    # -----------------------------
+
+    chemistry_topics = {
+        "organic chemistry": [
+            "organic chemistry",
+            "hydrocarbon",
+            "alkane",
+            "alkene",
+            "alkyne"
+        ],
+
+        "chemical bonding": [
+            "chemical bond",
+            "ionic bond",
+            "covalent bond",
+            "bonding"
+        ],
+
+        "atomic structure": [
+            "atom",
+            "electron",
+            "proton",
+            "neutron",
+            "atomic structure"
+        ]
+    }
+
+    for topic, keywords in chemistry_topics.items():
+
+        for keyword in keywords:
+
+            if keyword in q:
+
+                return {
+                    "subject": "Chemistry",
+                    "topic": topic.title()
+                }
+
+    # -----------------------------
+    # Biology
+    # -----------------------------
+
+    biology_topics = {
+        "human anatomy": [
+            "human body",
+            "organ",
+            "heart",
+            "brain",
+            "lung",
+            "kidney",
+            "anatomy"
+        ],
+
+        "cell biology": [
+            "cell",
+            "mitochondria",
+            "nucleus",
+            "cell membrane"
+        ],
+
+        "genetics": [
+            "genetics",
+            "dna",
+            "rna",
+            "gene",
+            "chromosome"
+        ]
+    }
+
+    for topic, keywords in biology_topics.items():
+
+        for keyword in keywords:
+
+            if keyword in q:
+
+                return {
+                    "subject": "Biology",
+                    "topic": topic.title()
+                }
+
+    # -----------------------------
+    # Gemini fallback
+    # -----------------------------
+
+    client = get_gemini_client()
+
+    if client is None:
+
+        return {
+            "subject": "General",
+            "topic": "General"
+        }
 
     prompt = f"""
-You are the topic classifier for SmartLearn, an adaptive learning system.
+You are the topic classifier for SmartLearn.
 
 Analyze the student's question and identify the most likely
 academic subject and topic.
@@ -27,39 +328,59 @@ academic subject and topic.
 Student question:
 {question}
 
-Return ONLY this format:
+Return ONLY:
 
 SUBJECT: <subject>
 TOPIC: <topic>
 
-Rules:
-- Use a common academic subject name.
-- Use a concise topic name.
-- Do not explain anything.
-- Do not answer the question.
-- If the question is about programming, identify the programming
-  concept or data structure/algorithm when possible.
-- If the question is mathematical, identify the mathematical topic.
+Do not answer the question.
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
-    )
+    try:
 
-    text = response.text.strip()
+        response = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=prompt
+        )
+
+        text = response.text.strip()
+
+    except ClientError as e:
+
+        if getattr(e, "code", None) == 429:
+
+            print(
+                "Gemini quota exceeded during topic detection. "
+                "Using General topic."
+            )
+
+            return {
+                "subject": "General",
+                "topic": "General"
+            }
+
+        raise
 
     subject = "General"
     topic = "General"
 
     for line in text.splitlines():
+
         line = line.strip()
 
         if line.upper().startswith("SUBJECT:"):
-            subject = line.split(":", 1)[1].strip()
+
+            subject = line.split(
+                ":",
+                1
+            )[1].strip()
 
         elif line.upper().startswith("TOPIC:"):
-            topic = line.split(":", 1)[1].strip()
+
+            topic = line.split(
+                ":",
+                1
+            )[1].strip()
 
     return {
         "subject": subject,
@@ -76,15 +397,22 @@ def generate_tutor_response(
     reason: str,
     history: list | None = None
 ):
+
     if history is None:
         history = []
 
-    if not GEMINI_API_KEY:
-        raise RuntimeError(
-            "GEMINI_API_KEY is not configured in the .env file."
+    client = get_gemini_client()
+
+    if client is None:
+
+        return (
+            "AI Tutor is currently unavailable. "
+            "Please continue with the available learning activities."
         )
 
-    client = genai.Client(api_key=GEMINI_API_KEY)
+    # -----------------------------
+    # Learning level
+    # -----------------------------
 
     if mastery_percentage < 40:
 
@@ -92,14 +420,11 @@ def generate_tutor_response(
 
         teaching_style = """
 Teach from the fundamentals.
-
 Use very simple language.
 Avoid unnecessary technical jargon.
 Use real-world analogies.
 Use small examples.
 Break concepts into short steps.
-Check whether the student understands before moving
-to advanced concepts.
 """
 
     elif mastery_percentage < 70:
@@ -107,13 +432,11 @@ to advanced concepts.
         learning_level = "intermediate"
 
         teaching_style = """
-Assume the student understands the basic idea.
-
 Strengthen conceptual understanding.
 Use practical examples.
 Use step-by-step reasoning.
 Point out common mistakes.
-Connect the concept to related concepts.
+Connect related concepts.
 """
 
     else:
@@ -121,20 +444,25 @@ Connect the concept to related concepts.
         learning_level = "advanced"
 
         teaching_style = """
-Assume the student has strong fundamentals.
-
 Focus on deeper reasoning.
 Discuss edge cases when useful.
 Use technical terminology appropriately.
 Connect the concept to real applications.
 Challenge the student's understanding.
 """
+
+    # -----------------------------
+    # Conversation history
+    # -----------------------------
+
     conversation_text = ""
 
     if history:
+
         conversation_lines = []
 
         for message in history[-10:]:
+
             role = (
                 "Student"
                 if message["role"] == "student"
@@ -148,15 +476,17 @@ Challenge the student's understanding.
         conversation_text = "\n".join(
             conversation_lines
         )
+
+    # -----------------------------
+    # Tutor prompt
+    # -----------------------------
+
     prompt = f"""
 You are SmartLearn AI Tutor.
 
 You are NOT a generic chatbot.
 
 Your job is to act as a personalized academic tutor.
-
-The SmartLearn learning system has already estimated
-the student's current knowledge level.
 
 Detected topic:
 {topic}
@@ -182,78 +512,76 @@ Teaching strategy:
 Recent conversation:
 {conversation_text}
 
-Use this conversation only to understand follow-up questions
-and maintain context.
-
 Student question:
 {question}
 
-
-IMPORTANT ADAPTIVE RULES
-========================
+IMPORTANT RULES
 
 1. The mastery percentage comes from SmartLearn's
    knowledge-tracking system.
 
-2. NEVER change, invent or estimate the mastery percentage.
+2. NEVER change or invent the mastery percentage.
 
-3. Adapt the explanation to the student's current level.
+3. Adapt the explanation to the student's level.
 
-4. If mastery is low:
-   - start from fundamentals
-   - use simple language
-   - use analogies
-   - use small examples
+4. If mastery is low, teach fundamentals first.
 
-5. If mastery is intermediate:
-   - strengthen understanding
-   - provide examples
-   - explain common mistakes
-   - provide guided reasoning
+5. If mastery is intermediate, strengthen understanding.
 
-6. If mastery is advanced:
-   - go deeper
-   - discuss edge cases
-   - use technical terminology
-   - provide challenging applications
+6. If mastery is advanced, provide deeper reasoning.
 
 7. If the student asks for a simpler explanation,
-   explain the SAME concept using a simpler approach.
+   explain the same concept more simply.
 
 8. If the student asks for an example,
    provide a relevant example.
 
 9. If the student asks for a practice question,
-   provide ONE question appropriate for the student's level.
+   provide ONE suitable question.
 
-10. If the student asks a programming question,
-    provide a clear explanation and a small useful example.
+10. Programming questions should include useful examples.
 
-11. If the student asks a mathematical question,
-    show the reasoning step-by-step when appropriate.
+11. Mathematical questions should show reasoning when useful.
 
-12. Do not claim that the student's mastery changed
-    simply because they asked a question.
+12. Asking questions does NOT change mastery.
 
-13. The AI Tutor explains and teaches.
+13. AI Tutor explains and teaches.
     It does NOT determine mastery.
 
-14. Keep the response concise enough for an interactive
+14. Keep the answer concise enough for an interactive
     learning device.
 
 15. Use Markdown where useful.
 
 16. Stay focused on the detected topic.
 
-17. If the question is ambiguous, explain the most likely
-    interpretation and mention the interpretation briefly.
-
 Return ONLY the tutor response.
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
-    )
+    try:
 
-    return response.text
+        response = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=prompt
+        )
+
+        return response.text
+
+    except ClientError as e:
+
+        if getattr(e, "code", None) == 429:
+
+            print(
+                "Gemini quota exceeded during AI Tutor response."
+            )
+
+            return (
+                "The AI Tutor has temporarily reached "
+                "its daily AI request limit.\n\n"
+                "Your learning progress is safe. "
+                "Please continue with the available "
+                "practice activities and try the AI Tutor "
+                "again after the quota resets."
+            )
+
+        raise
